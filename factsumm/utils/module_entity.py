@@ -35,22 +35,21 @@ def load_ner(model: str, device: str) -> object:
             for sentence in sentences:
                 sentence = Sentence(sentence)
                 ner.predict(sentence)
-                line_result = sentence.to_dict(tag_type="ner")
+                line_result = sentence.get_spans('ner')
 
                 cache = dict()
                 dedup = list()
 
-                for entity in line_result["entities"]:
-                    existence = cache.get(entity["text"], False)
-
-                    if not existence:
+                for entity in line_result:
+                    
+                    if entity.text not in cache:
                         dedup.append({
-                            "word": entity["text"],
-                            "entity": entity["labels"][0].value,
-                            "start": entity["start_pos"],
-                            "end": entity["end_pos"],
-                        })
-                        cache[entity["text"]] = True
+                            "word": entity.text, 
+                            "entity": entity.tag, 
+                            "start": entity.start_position, 
+                            "end": entity.end_position, 
+                        }) 
+                        cache[entity.text] = None
 
                 result.append(dedup)
 
