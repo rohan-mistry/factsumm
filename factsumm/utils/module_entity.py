@@ -142,6 +142,7 @@ def load_rel(model: str, device: str):
                     relation,
                     sentence["text"]
                     [sentence["spans"][-1][0]:sentence["spans"][-1][-1]],
+                    (sentence["ner"][0], sentence["ner"][1])
                 ))
 
         return triples
