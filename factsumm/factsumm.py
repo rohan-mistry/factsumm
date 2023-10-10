@@ -17,6 +17,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("flair").setLevel(logging.ERROR)
 
+# Rohan: numeric data types
+numeric_data = ('DATE', 'CARDINAL')
 
 class FactSumm:
 
@@ -78,7 +80,8 @@ class FactSumm:
                 "spans": [
                     (comb[0]["start"], comb[0]["end"]),
                     (comb[-1]["start"], comb[-1]["end"]),
-                ]
+                ],
+                "ner": (comb[0]['entity'], comb[-1]['entity'])
             } for comb in line_perms]
 
             total_perms.append(line_perms)
@@ -171,18 +174,63 @@ class FactSumm:
             Tuple[Set, Set]: filtered sources and summaries
 
         """
-        source_tuple = {(source[0], source[1]) for source in sources}
-        summary_tuple = {(summary[0], summary[1]) for summary in summaries}
 
-        sources = {
-            source for source in sources
-            if (source[0], source[1]) in summary_tuple
-        }
-        summaries = {
-            summary for summary in summaries
-            if (summary[0], summary[1]) in source_tuple
-        }
-        return sources, summaries
+        #Rohan: Used for filtering common facts in source which are also present in summary, changed for cross pairing numeric data
+
+        filtered_sources = set()
+        for source in sources:
+            for summary in summaries:
+                if (source[1] == summary[1] and 
+                    (((source[-1][0] in numeric_data or source[-1][1] in numeric_data) and (summary[-1][0] in numeric_data or summary[-1][1] in numeric_data) and
+                    (source[0] == summary[0] or source[2] == summary[2])) or (source[0] == summary[0]))):
+                    filtered_sources.add(source)
+                    continue
+
+        filtered_summary = set()
+
+        #Rohan: Used for filtering common facts in summary which are also present in source, changed for cross pairing numeric data
+
+        for summary in summaries:
+            for source in sources:
+                if (source[1] == summary[1] and 
+                    (((summary[-1][0] in numeric_data or summary[-1][1] in numeric_data) and (source[-1][0] in numeric_data or source[-1][1] in numeric_data) and 
+                    (source[0] == summary[0] or source[2] == summary[2])) or (source[0] == summary[0]))):
+                    filtered_summary.add(summary)
+                    continue
+
+
+        return filtered_sources, filtered_summary
+
+
+    # Rohan: Used for extracting common and uncommon facts considering the special case of cross pairing numeric data
+    def extract_common_uncommon(self, sources, summaries):
+        numeric_data = ('DATE', 'CARDINAL')
+        common_facts = set()
+        uncommon_facts = set()
+        for summary in summaries:
+            found = False
+            for source in sources:
+                if (source == summary or (source[1] == summary[1] and 
+                    (((source[-1][0] in numeric_data or source[-1][1] in numeric_data) and (summary[-1][0] in numeric_data or summary[-1][1] in numeric_data) and
+                    (source[0] == summary[2] and source[2] == summary[0]))))):
+                    common_facts.add(summary)
+                    found = True
+                    continue
+
+            if not found:
+                uncommon_facts.add(summary)
+
+        return common_facts, uncommon_facts
+    
+
+    #Rohan: Check if summary nuneric data is substring of source numeric data
+    def checkIfStringIsSubstring(self, word, list):
+        for key in list:
+            if word in key:
+                return True
+            
+        return False
+
 
     def extract_facts(
         self,
@@ -218,14 +266,40 @@ class FactSumm:
         source_facts = self.get_facts(source_lines, source_ents)
         summary_facts = self.get_facts(summary_lines, summary_ents)
 
+        self._print_facts("bef source", source_facts)
+        self._print_facts("bef summary", summary_facts)
+
         # filter out some facts
         source_facts, summary_facts = self._filter_out(
             source_facts,
             summary_facts,
         )
 
-        common_facts = summary_facts.intersection(source_facts)
-        diff_facts = summary_facts.difference(source_facts)
+        common_facts, diff_facts = self.extract_common_uncommon(source_facts, summary_facts)
+
+        #Rohan: penalty for uncommon numeric facts
+
+        total_matched_numeric = 0
+
+        numeric_source_entities = {}
+
+        numeric_source_entities = {entity['word']: 1 for entity_line in source_ents for entity in entity_line if entity['entity'] in numeric_data}
+        numeric_summary_entities = {entity['word']: 1 for entity_line in summary_ents for entity in entity_line if entity['entity'] in numeric_data}
+
+        print('num source : ')
+        print(numeric_source_entities)
+        print('num summary : ')
+        print(numeric_summary_entities)
+
+        numeric_source_entities_keys = numeric_source_entities.keys()
+
+        total_summary_numeric = len(numeric_summary_entities)
+
+        #Rohan: Calculate count of numeric summary data which matches with source numeric data
+        for entity in numeric_summary_entities:
+            if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities_keys):
+                total_matched_numeric += 1
+                    
 
         if verbose:
             self._print_entities("source", source_ents)
@@ -241,6 +315,12 @@ class FactSumm:
             fact_score = 0.0
         else:
             fact_score = len(common_facts) / len(summary_facts)
+            #Rohan: Calculate numeric fact score
+            numeric_fact_score = total_matched_numeric / total_summary_numeric
+            #Rohan: Take average of original fact score and new numeric fact score
+            fact_score = (fact_score + numeric_fact_score) / 2
+
+        print(f"Numeric Data Match: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
         print(f"Fact Score: {fact_score}")
 
         return source_ents, summary_ents, fact_score
