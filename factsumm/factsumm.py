@@ -315,13 +315,16 @@ class FactSumm:
             #Rohan: Calculate numeric fact score
             numeric_fact_score = total_matched_numeric / total_summary_numeric
         else:
-            numeric_fact_score = 0
+            numeric_fact_score = 0.0
 
         if not summary_facts:
             fact_score = 0.0
+            numeric_fact_score = 0.0
         else:
             fact_score = len(common_facts) / len(summary_facts)
-            #Rohan: Take average of original fact score and new numeric fact score
+
+        #Rohan: Take average of original fact score and new numeric fact score
+        if numeric_fact_score > 0:
             fact_score = (fact_score + numeric_fact_score) / 2
 
         print(f"Numeric Data Match: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
