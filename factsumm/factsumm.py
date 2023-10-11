@@ -311,12 +311,16 @@ class FactSumm:
             self._print_facts("common", common_facts)
             self._print_facts("diff", diff_facts)
 
+        if total_summary_numeric != 0:
+            #Rohan: Calculate numeric fact score
+            numeric_fact_score = total_matched_numeric / total_summary_numeric
+        else:
+            numeric_fact_score = 0
+
         if not summary_facts:
             fact_score = 0.0
         else:
             fact_score = len(common_facts) / len(summary_facts)
-            #Rohan: Calculate numeric fact score
-            numeric_fact_score = total_matched_numeric / total_summary_numeric
             #Rohan: Take average of original fact score and new numeric fact score
             fact_score = (fact_score + numeric_fact_score) / 2
 
