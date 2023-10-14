@@ -181,8 +181,7 @@ class FactSumm:
         for source in sources:
             for summary in summaries:
                 if (source[1] == summary[1] and 
-                    (((source[-1][0] in numeric_data or source[-1][1] in numeric_data) and (summary[-1][0] in numeric_data or summary[-1][1] in numeric_data) and
-                    (source[0] == summary[0] or source[2] == summary[2])) or (source[0] == summary[0]))):
+                    ((source[0] == summary[2] or source[2] == summary[0]) or (source[0] == summary[0] or source[1] == summary[1]))):
                     filtered_sources.add(source)
                     continue
 
@@ -193,8 +192,7 @@ class FactSumm:
         for summary in summaries:
             for source in sources:
                 if (source[1] == summary[1] and 
-                    (((summary[-1][0] in numeric_data or summary[-1][1] in numeric_data) and (source[-1][0] in numeric_data or source[-1][1] in numeric_data) and 
-                    (source[0] == summary[0] or source[2] == summary[2])) or (source[0] == summary[0]))):
+                    ((source[0] == summary[2] or source[2] == summary[0]) or (source[0] == summary[0] or source[1] == summary[1]))):
                     filtered_summary.add(summary)
                     continue
 
@@ -210,9 +208,7 @@ class FactSumm:
         for summary in summaries:
             found = False
             for source in sources:
-                if (source == summary or (source[1] == summary[1] and 
-                    (((source[-1][0] in numeric_data or source[-1][1] in numeric_data) and (summary[-1][0] in numeric_data or summary[-1][1] in numeric_data) and
-                    (source[0] == summary[2] and source[2] == summary[0]))))):
+                if (source == summary or (source[1] == summary[1] and (source[0] == summary[2] and source[2] == summary[0]))):
                     common_facts.add(summary)
                     found = True
                     continue
@@ -266,8 +262,8 @@ class FactSumm:
         source_facts = self.get_facts(source_lines, source_ents)
         summary_facts = self.get_facts(summary_lines, summary_ents)
 
-        self._print_facts("bef source", source_facts)
-        self._print_facts("bef summary", summary_facts)
+        self._print_facts("Unfiltered source", source_facts)
+        self._print_facts("Unfiltered summary", summary_facts)
 
         # filter out some facts
         source_facts, summary_facts = self._filter_out(
@@ -305,8 +301,8 @@ class FactSumm:
             self._print_entities("source", source_ents)
             self._print_entities("summary", summary_ents)
 
-            self._print_facts("source", source_facts)
-            self._print_facts("summary", summary_facts)
+            self._print_facts("Filtered source", source_facts)
+            self._print_facts("Filtered summary", summary_facts)
 
             self._print_facts("common", common_facts)
             self._print_facts("diff", diff_facts)
@@ -322,11 +318,12 @@ class FactSumm:
         else:
             fact_score = len(common_facts) / len(summary_facts)
 
+        print(f"Fact Match Score: {fact_score}")
         #Rohan: Take average of original fact score and new numeric fact score
         fact_score = (fact_score + numeric_fact_score) / 2
 
         print(f"Numeric Data Match: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
-        print(f"Fact Score: {fact_score}")
+        print(f"Final Fact Score: {fact_score}")
 
         return source_ents, summary_ents, fact_score
 
