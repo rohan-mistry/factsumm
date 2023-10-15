@@ -208,7 +208,7 @@ class FactSumm:
         for summary in summaries:
             found = False
             for source in sources:
-                if (source == summary or (source[1] == summary[1] and (source[0] == summary[2] and source[2] == summary[0]))):
+                if ((source[0]==summary[0] and source[1]==summary[1] and source[2]==summary[2]) or (source[1] == summary[1] and (source[0] == summary[2] and source[2] == summary[0]))):
                     common_facts.add(summary)
                     found = True
                     continue
