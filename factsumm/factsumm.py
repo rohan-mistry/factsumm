@@ -279,23 +279,30 @@ class FactSumm:
 
         numeric_source_entities = {}
 
-        numeric_source_entities = {entity['word']: 1 for entity_line in source_ents for entity in entity_line if entity['entity'] in numeric_data}
-        numeric_summary_entities = {entity['word']: 1 for entity_line in summary_ents for entity in entity_line if entity['entity'] in numeric_data}
+        numeric_source_entities = {entity['word']: 1 for entity_line in source_ents for entity in entity_line}
+        numeric_summary_entities = {entity['word']: 1 for entity_line in summary_ents for entity in entity_line}
 
-        print('num source : ')
+        print('entity source : ')
         print(numeric_source_entities)
-        print('num summary : ')
+        print('entity summary : ')
         print(numeric_summary_entities)
 
         numeric_source_entities_keys = numeric_source_entities.keys()
 
         total_summary_numeric = len(numeric_summary_entities)
 
+        unmatched_entities = {}
+
         #Rohan: Calculate count of numeric summary data which matches with source numeric data
         for entity in numeric_summary_entities:
             if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities_keys):
                 total_matched_numeric += 1
+            else:
+                unmatched_entities[entity] = 1
+
                     
+        print('Not matching entities : ')
+        print(unmatched_entities)
 
         if verbose:
             self._print_entities("source", source_ents)
@@ -320,9 +327,9 @@ class FactSumm:
 
         print(f"Fact Match Score: {fact_score}")
         #Rohan: Take average of original fact score and new numeric fact score
-        fact_score = (fact_score + numeric_fact_score) / 2
+        fact_score = max(fact_score, numeric_fact_score)
 
-        print(f"Numeric Data Match: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
+        print(f"Entity Score: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
         print(f"Final Fact Score: {fact_score}")
 
         return source_ents, summary_ents, fact_score
