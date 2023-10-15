@@ -327,7 +327,10 @@ class FactSumm:
 
         print(f"Fact Match Score: {fact_score}")
         #Rohan: Take average of original fact score and new numeric fact score
-        fact_score = max(fact_score, numeric_fact_score)
+        if fact_score == 0:
+            fact_score = numeric_fact_score
+        else:
+            fact_score = (fact_score + numeric_fact_score) / 2
 
         print(f"Entity Score: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
         print(f"Final Fact Score: {fact_score}")
