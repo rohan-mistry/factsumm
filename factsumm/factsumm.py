@@ -11,6 +11,7 @@ from factsumm.utils.module_entity import load_ie, load_ner, load_rel
 from factsumm.utils.module_question import load_qa, load_qg
 from factsumm.utils.module_sentence import load_bert_score
 from factsumm.utils.utils import Config, qags_score
+import spacy
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -226,6 +227,31 @@ class FactSumm:
                 return True
             
         return False
+    
+    def format_entity(self, word):
+        return ''.join(chunk.lower() for chunk in word.split())
+    
+    def is_word_present(self, paragraph, target_word):
+        # Check if the target word is present in the paragraph
+        return target_word in paragraph
+    
+    def extract_spacy_entities(self, lines):
+        result = list()
+        nlp = spacy.load("en_core_web_sm")
+        for line in lines:
+            doc = nlp(line)
+            line_entities = list()
+            cache = {}
+            for ent in doc.ents:
+                if ent.text not in cache:
+                    line_entities.append({
+                        "word": ent.text
+                    })
+                    cache[ent.text] = 1
+
+            result.append(line_entities)
+
+        return result
 
 
     def extract_facts(
@@ -277,10 +303,13 @@ class FactSumm:
 
         total_matched_numeric = 0
 
-        numeric_source_entities = {}
+        source_ents_including_spacy = source_ents + self.extract_spacy_entities(source_lines)
 
-        numeric_source_entities = {entity['word']: 1 for entity_line in source_ents for entity in entity_line}
-        numeric_summary_entities = {entity['word']: 1 for entity_line in summary_ents for entity in entity_line}
+        numeric_source_entities = {self.format_entity(entity['word']): 1 for entity_line in source_ents_including_spacy for entity in entity_line}
+
+        del source_ents_including_spacy
+
+        numeric_summary_entities = {self.format_entity(entity['word']): 1 for entity_line in summary_ents for entity in entity_line}
 
         print('entity source : ')
         print(numeric_source_entities)
@@ -293,14 +322,18 @@ class FactSumm:
 
         unmatched_entities = {}
 
+        source = source.lower()
+
+        
+
         #Rohan: Calculate count of numeric summary data which matches with source numeric data
         for entity in numeric_summary_entities:
-            if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities_keys):
+            if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities_keys) or self.is_word_present(source, entity):
                 total_matched_numeric += 1
             else:
                 unmatched_entities[entity] = 1
 
-                    
+           
         print('Not matching entities : ')
         print(unmatched_entities)
 
@@ -327,10 +360,8 @@ class FactSumm:
 
         print(f"Fact Match Score: {fact_score}")
         #Rohan: Take average of original fact score and new numeric fact score
-        if fact_score == 0:
-            fact_score = numeric_fact_score
-        else:
-            fact_score = (fact_score + numeric_fact_score) / 2
+        
+        fact_score = (fact_score + numeric_fact_score) / 2
 
         print(f"Entity Score: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
         print(f"Final Fact Score: {fact_score}")
