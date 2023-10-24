@@ -264,6 +264,13 @@ class FactSumm:
 
         return result
 
+    def prepareEntityList(self, lines, entities):
+        ents_including_spacy = entities + self.extract_spacy_entities(lines)
+        combined_entities = {self.format_entity(entity['word']): 1 for entity_line in ents_including_spacy for entity in entity_line}
+        del ents_including_spacy
+
+        return combined_entities
+
 
     def extract_facts(
         self,
@@ -314,13 +321,8 @@ class FactSumm:
 
         total_matched_numeric = 0
 
-        source_ents_including_spacy = source_ents + self.extract_spacy_entities(source_lines)
-
-        numeric_source_entities = {self.format_entity(entity['word']): 1 for entity_line in source_ents_including_spacy for entity in entity_line}
-
-        del source_ents_including_spacy
-
-        numeric_summary_entities = {self.format_entity(entity['word']): 1 for entity_line in summary_ents for entity in entity_line}
+        numeric_source_entities = self.prepareEntityList(source_lines, source_ents)
+        numeric_summary_entities = self.prepareEntityList(summary_lines, summary_ents)
 
         print('entity source : ')
         print(numeric_source_entities)
