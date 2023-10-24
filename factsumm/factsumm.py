@@ -163,6 +163,12 @@ class FactSumm:
             print(fact)
         print()
 
+    def formatData(self, triple):
+        triple[0] = self.format_entity(triple[0])
+        triple[2] = self.format_entity(triple[2])
+
+        return tuple(triple)
+
     def _filter_out(self, sources: Set, summaries: Set) -> Tuple[Set, Set]:
         """
         Filter out triples that don't share a subject and relation for comparability
@@ -180,9 +186,11 @@ class FactSumm:
 
         filtered_sources = set()
         for source in sources:
+            sanitised_source = self.formatData(list(source))
             for summary in summaries:
+                sanitised_summary = self.formatData(list(summary))
                 if (source[1] == summary[1] and 
-                    ((source[0] == summary[2] or source[2] == summary[0]) or (source[0] == summary[0] or source[1] == summary[1]))):
+                    ((sanitised_source[0] == sanitised_summary[2] or sanitised_source[2] == sanitised_summary[0]) or (sanitised_source[0] == sanitised_summary[0] or sanitised_source[1] == sanitised_summary[1]))):
                     filtered_sources.add(source)
                     continue
 
@@ -191,9 +199,11 @@ class FactSumm:
         #Rohan: Used for filtering common facts in summary which are also present in source, changed for cross pairing numeric data
 
         for summary in summaries:
+            sanitised_summary = self.formatData(list(summary))
             for source in sources:
+                sanitised_source = self.formatData(list(source))
                 if (source[1] == summary[1] and 
-                    ((source[0] == summary[2] or source[2] == summary[0]) or (source[0] == summary[0] or source[1] == summary[1]))):
+                    ((sanitised_source[0] == sanitised_summary[2] or sanitised_source[2] == sanitised_summary[0]) or (sanitised_source[0] == sanitised_summary[0] or sanitised_source[1] == sanitised_summary[1]))):
                     filtered_summary.add(summary)
                     continue
 
@@ -203,13 +213,14 @@ class FactSumm:
 
     # Rohan: Used for extracting common and uncommon facts considering the special case of cross pairing numeric data
     def extract_common_uncommon(self, sources, summaries):
-        numeric_data = ('DATE', 'CARDINAL')
         common_facts = set()
         uncommon_facts = set()
         for summary in summaries:
+            sanitised_summary = self.formatData(list(summary))
             found = False
             for source in sources:
-                if ((source[0]==summary[0] and source[1]==summary[1] and source[2]==summary[2]) or (source[1] == summary[1] and (source[0] == summary[2] and source[2] == summary[0]))):
+                sanitised_source = self.formatData(list(source))
+                if ((sanitised_source[0]==sanitised_summary[0] and sanitised_source[1]==sanitised_summary[1] and sanitised_source[2]==sanitised_summary[2]) or (sanitised_source[1] == sanitised_summary[1] and (sanitised_source[0] == sanitised_summary[2] and sanitised_source[2] == sanitised_summary[0]))):
                     common_facts.add(summary)
                     found = True
                     continue
@@ -316,8 +327,6 @@ class FactSumm:
         print('entity summary : ')
         print(numeric_summary_entities)
 
-        numeric_source_entities_keys = numeric_source_entities.keys()
-
         total_summary_numeric = len(numeric_summary_entities)
 
         unmatched_entities = {}
@@ -328,7 +337,7 @@ class FactSumm:
 
         #Rohan: Calculate count of numeric summary data which matches with source numeric data
         for entity in numeric_summary_entities:
-            if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities_keys) or self.is_word_present(source, entity):
+            if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities) or self.is_word_present(source, entity):
                 total_matched_numeric += 1
             else:
                 unmatched_entities[entity] = 1
