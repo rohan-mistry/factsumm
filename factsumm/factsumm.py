@@ -319,7 +319,7 @@ class FactSumm:
 
         #Rohan: penalty for uncommon numeric facts
 
-        total_matched_numeric = 0
+        total_matched_entities = 0
 
         numeric_source_entities = self.prepareEntityList(source_lines, source_ents)
         numeric_summary_entities = self.prepareEntityList(summary_lines, summary_ents)
@@ -329,18 +329,16 @@ class FactSumm:
         print('entity summary : ')
         print(numeric_summary_entities)
 
-        total_summary_numeric = len(numeric_summary_entities)
+        total_summary_entities = len(numeric_summary_entities)
 
         unmatched_entities = {}
 
         source = source.lower()
 
-        
-
         #Rohan: Calculate count of numeric summary data which matches with source numeric data
         for entity in numeric_summary_entities:
             if numeric_source_entities.get(entity) != None or self.checkIfStringIsSubstring(entity, numeric_source_entities) or self.is_word_present(source, entity):
-                total_matched_numeric += 1
+                total_matched_entities += 1
             else:
                 unmatched_entities[entity] = 1
 
@@ -358,11 +356,11 @@ class FactSumm:
             self._print_facts("common", common_facts)
             self._print_facts("diff", diff_facts)
 
-        if total_summary_numeric != 0:
+        if total_summary_entities != 0:
             #Rohan: Calculate numeric fact score
-            numeric_fact_score = total_matched_numeric / total_summary_numeric
+            entity_score = total_matched_entities / total_summary_entities
         else:
-            numeric_fact_score = 0.0
+            entity_score = 0.0
 
         if not summary_facts:
             fact_score = 0.0
@@ -370,11 +368,13 @@ class FactSumm:
             fact_score = len(common_facts) / len(summary_facts)
 
         print(f"Fact Match Score: {fact_score}")
-        #Rohan: Take average of original fact score and new numeric fact score
+        #Rohan: Take weighted average of original fact score and entity fact score
         
-        fact_score = (fact_score + numeric_fact_score) / 2
+        FACT_WEIGHATGE = 0.3
+        ENTITY_WEIGHTAGE = 0.7
+        fact_score = FACT_WEIGHATGE * fact_score + ENTITY_WEIGHTAGE * entity_score
 
-        print(f"Entity Score: {total_matched_numeric} / {total_summary_numeric} : {numeric_fact_score}")
+        print(f"Entity Score: {total_matched_entities} / {total_summary_entities} : {entity_score}")
         print(f"Final Fact Score: {fact_score}")
 
         return source_ents, summary_ents, fact_score
